@@ -1,4 +1,4 @@
-"""档案管理接口：维护设备档案，覆盖办理借阅、登记归还、申请销毁等动作。"""
+"""档案管理接口：按借阅状态分档查询，并覆盖办理借阅、登记归还、申请销毁等动作。"""
 from __future__ import annotations
 
 from typing import Any
@@ -6,28 +6,48 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query
 
 from app.schemas import ActionResult, EntryPayload, PageResult
-from app.services.archive import ArchiveService
+from app.services.archive import STATUS_ORDER, ArchiveService
 
 router = APIRouter(prefix="/api/archive", tags=["档案管理"])
 
 service = ArchiveService()
-
-LIST_FIELDS = ["档案编号", "所属设备", "档案类别", "归档日期", "借阅人", "借阅日期", "归还日期", "档案状态"]
-STATUSES = ["在库", "借出中", "已归还", "已销毁"]
 
 
 @router.get("", response_model=PageResult[dict])
 def list_entries(
     keyword: str | None = Query(default=None, description="按档案编号检索"),
     status: str | None = Query(default=None, description="在库、借出中、已归还、已销毁"),
+    category: str | None = Query(default=None, description="按档案类别精确过滤"),
     page: int = 1,
-    size: int = 20,
+    size: int = 50,
 ) -> PageResult[dict]:
-    """按档案编号与状态过滤档案管理列表；没有数据时返回空页，不报错。"""
+    """按档案编号、档案类别与借阅状态过滤档案列表；没有数据时返回空页，不报错。"""
     if size > 200:
         raise HTTPException(status_code=400, detail="每页最多 200 条，请缩小分页范围")
-    items, total = service.list_entries(keyword=keyword, status=status, page=page, size=size)
+    if status and status not in STATUS_ORDER:
+        statuses = "、".join(STATUS_ORDER)
+        raise HTTPException(status_code=400, detail=f"借阅状态只能是：{statuses}")
+    items, total = service.list_entries(keyword=keyword, status=status, category=category, page=page, size=size)
     return PageResult(items=items, total=total, page=page, size=size)
+
+
+@router.get("/categories")
+def list_categories() -> dict[str, list[str]]:
+    """档案类别下拉清单；取不到内容时由前端再取一次重新定位。"""
+    return {"items": service.list_categories()}
+
+
+@router.get("/stats")
+def status_stats() -> dict[str, int]:
+    """各借阅状态分档计数。"""
+    return service.status_stats()
+
+
+@router.get("/export")
+def export_entries() -> dict[str, Any]:
+    """导出档案管理清单：统一口径的全量数据。"""
+    items, total = service.list_entries(page=1, size=10000)
+    return {"module": "archive", "total": total, "items": items}
 
 
 @router.get("/{entry_id}", response_model=dict)
@@ -52,14 +72,7 @@ def create_entry(payload: EntryPayload) -> ActionResult:
 def run_action(entry_id: int, payload: EntryPayload) -> ActionResult:
     """对单条设备档案执行办理借阅、登记归还、申请销毁；不允许的动作会被拦下并说明原因。"""
     action = str(payload.values.get("action") or "").strip()
-    entry, message = service.run_action(entry_id, action)
+    entry, message = service.run_action(entry_id, action, payload.values)
     if entry is None:
         return ActionResult(ok=False, message=message)
     return ActionResult(ok=True, message=message, entry=entry)
-
-
-@router.get("/export")
-def export_entries() -> dict[str, Any]:
-    """导出档案管理清单：返回当前过滤条件下的全量数据。"""
-    items, total = service.list_entries(page=1, size=10000)
-    return {"module": "archive", "total": total, "items": items}
