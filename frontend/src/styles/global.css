@@ -33,3 +33,44 @@ body { margin: 0; background: #f6f8fb; color: #1f2937; }
 .link { border: none; background: none; color: var(--brand); cursor: pointer; padding: 0; }
 .page-foot { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--muted); }
 .error-text { color: #b42318; }
+
+/* 表单控件统一外观（筛选输入框/下拉） */
+.filter-item input, .filter-item select {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 13px;
+  min-width: 160px;
+  background: #fff;
+  color: inherit;
+}
+.filter-item input:disabled, .filter-item select:disabled { background: #f1f5f9; color: var(--muted); }
+
+/* 借阅状态分档：统计卡片可点、下方标签栏同步高亮 */
+.stat-tab { cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+.stat-tab.active { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand) inset; }
+.tab-bar { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+.tab-item {
+  border: none; background: none; padding: 8px 14px; cursor: pointer;
+  font-size: 13px; color: var(--muted); border-bottom: 2px solid transparent;
+}
+.tab-item.active { color: var(--brand); border-bottom-color: var(--brand); font-weight: 600; }
+.tab-count { font-size: 12px; background: #eef2f7; border-radius: 10px; padding: 0 7px; margin-left: 4px; }
+.tab-item.active .tab-count { background: #e0ebff; color: var(--brand); }
+
+/* 锁定行：置顶、底色固定，重新打开页面也能一眼找到 */
+.locked-row { background: #eef5ff !important; }
+.locked-row td:first-child { border-left: 3px solid var(--brand); }
+.flash-row { animation: row-flash 1.6s ease-in-out; }
+@keyframes row-flash {
+  0%, 30% { box-shadow: 0 0 0 2px var(--brand) inset; }
+  100% { box-shadow: 0 0 0 0 transparent inset; }
+}
+.abnormal-row { background: #fef3f2; }
+.locked-row.abnormal-row { background: #eef5ff !important; }
+.missing-text { color: #b42318; font-weight: 600; }
+.locked-banner {
+  display: flex; justify-content: space-between; align-items: center;
+  background: #eef5ff; border: 1px solid #b9d3ff; color: #1e4fa3;
+  border-radius: 6px; padding: 6px 12px; font-size: 13px; margin: 0 0 10px;
+}
